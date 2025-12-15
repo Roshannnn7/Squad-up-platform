@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SquadUp - Find Your Squad</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: #0a0a0f;
+      color: #fff;
+      overflow-x: hidden;
+    }
+    
+    .gradient-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3), transparent 50%),
+                  radial-gradient(circle at 80% 80%, rgba(76, 201, 240, 0.3), transparent 50%);
+      animation: shift 15s ease infinite;
+      z-index: -1;
+    }
+    
+    @keyframes shift {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    .glow {
+      animation: glow 2s ease infinite alternate;
+    }
+    
+    @keyframes glow {
+      from { text-shadow: 0 0 20px #667eea, 0 0 30px #4cc9f0; }
+      to { text-shadow: 0 0 30px #667eea, 0 0 40px #4cc9f0; }
+    }
+    
+    .card-hover {
+      transition: all 0.3s ease;
+      border: 1px solid rgba(147, 197, 253, 0.1);
+    }
+    
+    .card-hover:hover {
+      transform: translateY(-8px);
+      border-color: rgba(102, 126, 234, 0.5);
+      box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-glow {
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-glow:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(10px);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal.active { display: flex; }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .animate-in {
+      animation: fadeInUp 1s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="gradient-bg"></div>
+
+  <!-- Navbar -->
+  <nav class="sticky top-0 z-50 backdrop-blur-xl bg-black/50 border-b border-blue-500/10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex justify-between items-center">
+        <button onclick="showHome()" class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+          SquadUp
+        </button>
+        
+        <div class="hidden md:flex items-center gap-8">
+          <button onclick="showProjects()" class="text-gray-300 hover:text-cyan-400 transition">Projects</button>
+          <button onclick="showProfiles()" class="text-gray-300 hover:text-cyan-400 transition">Profiles</button>
+          <button onclick="showDiscover()" class="text-gray-300 hover:text-cyan-400 transition">Discover</button>
+          <div id="navAuth">
+            <button onclick="openAuth('login')" class="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-2 rounded-full font-semibold btn-glow">
+              Sign In
+            </button>
+          </div>
+        </div>
+        
+        <button onclick="toggleMenu()" class="md:hidden text-white text-2xl">☰</button>
+      </div>
+      
+      <div id="mobileMenu" class="hidden md:hidden mt-4 space-y-2">
+        <button onclick="showProjects(); toggleMenu()" class="block w-full text-left py-2 text-gray-300">Projects</button>
+        <button onclick="showProfiles(); toggleMenu()" class="block w-full text-left py-2 text-gray-300">Profiles</button>
+        <button onclick="showDiscover(); toggleMenu()" class="block w-full text-left py-2 text-gray-300">Discover</button>
+        <button onclick="openAuth('login'); toggleMenu()" class="block w-full text-left py-2 text-cyan-400 font-semibold">Sign In</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="content"></main>
+
+  <!-- Auth Modal -->
+  <div id="authModal" class="modal">
+    <div class="bg-slate-900/95 backdrop-blur-xl border border-blue-500/20 rounded-3xl p-8 max-w-md w-full mx-4 relative">
+      <button onclick="closeModal('authModal')" class="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl">×</button>
+      <h2 id="authTitle" class="text-3xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent"></h2>
+      
+      <div id="nameGroup" class="mb-4 hidden">
+        <label class="block text-sm font-semibold mb-2 text-gray-300">Name</label>
+        <input type="text" id="nameInput" class="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/20 rounded-xl text-white focus:outline-none focus:border-blue-500" placeholder="John Doe">
+      </div>
+      
+      <div class="mb-4">
+        <label class="block text-sm font-semibold mb-2 text-gray-300">Email</label>
+        <input type="email" id="emailInput" class="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/20 rounded-xl text-white focus:outline-none focus:border-blue-500" placeholder="you@example.com">
+      </div>
+      
+      <div class="mb-6">
+        <label class="block text-sm font-semibold mb-2 text-gray-300">Password</label>
+        <input type="password" id="passwordInput" class="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/20 rounded-xl text-white focus:outline-none focus:border-blue-500" placeholder="••••••••">
+      </div>
+      
+      <button onclick="handleAuth()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 py-3 rounded-full font-semibold btn-glow mb-4">
+        <span id="authBtn"></span>
+      </button>
+      
+      <p class="text-center text-gray-400 text-sm">
+        <span id="authSwitch"></span>
+        <button onclick="toggleAuth()" class="text-cyan-400 font-semibold ml-1" id="authLink"></button>
+      </p>
+    </div>
+  </div>
+
+  <!-- Project Modal -->
+  <div id="projectModal" class="modal">
+    <div class="bg-slate-900/95 backdrop-blur-xl border border-blue-500/20 rounded-3xl p-8 max-w-md w-full mx-4 relative">
+      <button onclick="closeModal('projectModal')" class="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl">×</button>
+      <h2 class="text-3xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Create Project</h2>
+      
+      <div class="mb-4">
+        <label class="block text-sm font-semibold mb-2 text-gray-300">Title</label>
+        <input type="text" id="projTitle" class="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/20 rounded-xl text-white focus:outline-none focus:border-blue-500" placeholder="AI Study Assistant">
+      </div>
+      
+      <div class="mb-4">
+        <label class="block text-sm font-semibold mb-2 text-gray-300">Description</label>
+        <textarea id="projDesc" rows="3" class="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/20 rounded-xl text-white focus:outline-none focus:border-blue-500" placeholder="Describe your project..."></textarea>
+      </div>
+      
+      <div class="mb-6">
+        <label class="block text-sm font-semibold mb-2 text-gray-300">Skills (comma separated)</label>
+        <input type="text" id="projSkills" class="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/20 rounded-xl text-white focus:outline-none focus:border-blue-500" placeholder="React, Python, AI">
+      </div>
+      
+      <button onclick="createProject()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 py-3 rounded-full font-semibold btn-glow">
+        Create Project
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let user = null;
+    let authMode = 'login';
+    let projects = [
+      { id: 1, title: "AI Study Assistant", desc: "Building an AI chatbot to help students with homework", skills: ["React", "Python", "AI"], author: "Sarah Chen", avatar: "SC", members: 3, max: 5, likes: 24 },
+      { id: 2, title: "Campus Event Platform", desc: "Mobile app for discovering college events", skills: ["React Native", "Node.js"], author: "Mike Johnson", avatar: "MJ", members: 2, max: 4, likes: 18 },
+      { id: 3, title: "Fashion Marketplace", desc: "E-commerce for second-hand clothes", skills: ["Vue.js", "Firebase"], author: "Emma Davis", avatar: "ED", members: 4, max: 6, likes: 31 },
+      { id: 4, title: "AR Campus Navigation", desc: "Indoor navigation with accessibility", skills: ["Unity", "ARCore"], author: "Alex Rivera", avatar: "AR", members: 2, max: 5, likes: 15 },
+      { id: 5, title: "Mental Health Bot", desc: "AI chatbot for student mental health support", skills: ["Python", "NLP"], author: "Jordan Lee", avatar: "JL", members: 3, max: 4, likes: 42 },
+      { id: 6, title: "Study Rooms", desc: "Virtual study rooms with video chat", skills: ["WebRTC", "React"], author: "Sam Taylor", avatar: "ST", members: 4, max: 6, likes: 27 }
+    ];
+    
+    let profiles = [
+      { name: "Alex Rivera", avatar: "AR", skills: ["UI/UX", "Figma", "React"], bio: "Design student passionate about UX", projects: 5 },
+      { name: "Jordan Lee", avatar: "JL", skills: ["Backend", "Python", "AWS"], bio: "CS major interested in cloud", projects: 8 },
+      { name: "Sam Taylor", avatar: "ST", skills: ["Mobile", "Flutter", "iOS"], bio: "Building apps for social good", projects: 6 },
+      { name: "Maya Patel", avatar: "MP", skills: ["Data Science", "ML"], bio: "Data enthusiast in AI", projects: 7 },
+      { name: "Chris Anderson", avatar: "CA", skills: ["Full Stack", "Node.js"], bio: "Full-stack web developer", projects: 9 },
+      { name: "Zara Khan", avatar: "ZK", skills: ["Product Design", "Research"], bio: "User-centered design focus", projects: 4 }
+    ];
+
+    function showHome() {
+      document.getElementById('content').innerHTML = `
+        <div class="min-h-screen flex items-center justify-center text-center px-4 py-20">
+          <div class="animate-in">
+            <h1 class="text-6xl md:text-8xl font-black mb-4 bg-gradient-to-r from-blue-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent glow">
+              Find Your Squad.
+            </h1>
+            <h2 class="text-5xl md:text-7xl font-black mb-6">Build The Future.</h2>
+            <p class="text-xl text-gray-300 max-w-2xl mx-auto mb-8 leading-relaxed">
+              The ultimate platform for students to connect, collaborate on projects, and bring innovative ideas to life.
+            </p>
+            <button onclick="showProjects()" class="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 rounded-full text-lg font-bold btn-glow">
+              Explore Projects →
+            </button>
+          </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 py-20 grid md:grid-cols-3 gap-8">
+          <div class="bg-slate-900/60 backdrop-blur-xl border border-blue-500/20 rounded-3xl p-8 card-hover">
+            <div class="text-5xl mb-4">🤝</div>
+            <h3 class="text-2xl font-bold mb-3">Connect & Collaborate</h3>
+            <p class="text-gray-300 leading-relaxed">Find like-minded students and form diverse squads to tackle ambitious projects.</p>
+          </div>
+          
+          <div class="bg-slate-900/60 backdrop-blur-xl border border-blue-500/20 rounded-3xl p-8 card-hover">
+            <div class="text-5xl mb-4">💼</div>
+            <h3 class="text-2xl font-bold mb-3">Build Portfolio</h3>
+            <p class="text-gray-300 leading-relaxed">Gain real-world experience and showcase your skills through exciting projects.</p>
+          </div>
+          
+          <div class="bg-slate-900/60 backdrop-blur-xl border border-blue-500/20 rounded-3xl p-8 card-hover">
+            <div class="text-5xl mb-4">🚀</div>
+            <h3 class="text-2xl font-bold mb-3">Launch Ideas</h3>
+            <p class="text-gray-300 leading-relaxed">Have a brilliant idea? Assemble a team and turn your vision into reality.</p>
+          </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 py-20">
+          <h2 class="text-5xl font-black text-center mb-12 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+            Featured Projects
+          </h2>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            ${projects.slice(0, 3).map(p => projectCard(p)).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function showProjects() {
+      document.getElementById('content').innerHTML = `
+        <div class="max-w-7xl mx-auto px-4 py-20">
+          <h1 class="text-5xl font-black mb-4 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Explore Projects</h1>
+          <p class="text-xl text-gray-300 mb-12">Find exciting projects to join or create your own</p>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            ${projects.map(p => projectCard(p)).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function showProfiles() {
+      document.getElementById('content').innerHTML = `
+        <div class="max-w-7xl mx-auto px-4 py-20">
+          <h1 class="text-5xl font-black mb-4 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Find Collaborators</h1>
+          <p class="text-xl text-gray-300 mb-12">Connect with talented students</p>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            ${profiles.map(p => profileCard(p)).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function showDiscover() {
+      document.getElementById('content').innerHTML = `
+        <div class="max-w-7xl mx-auto px-4 py-20">
+          <h1 class="text-5xl font-black mb-4 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Discover</h1>
+          <p class="text-xl text-gray-300 mb-12">Explore trending skills and categories</p>
+          
+          <div class="grid md:grid-cols-2 gap-8">
+            <div class="bg-slate-900/60 backdrop-blur-xl border border-blue-500/20 rounded-3xl p-8">
+              <h2 class="text-3xl font-bold mb-6">Trending Skills</h2>
+              <div class="flex flex-wrap gap-3">
+                ${['React', 'Python', 'UI/UX', 'Node.js', 'ML', 'Mobile', 'Data Science', 'Cloud'].map(s => 
+                  `<span class="bg-blue-500/20 text-cyan-400 px-4 py-2 rounded-full font-semibold border border-blue-500/30 hover:bg-blue-500/30 cursor-pointer transition">${s}</span>`
+                ).join('')}
+              </div>
+            </div>
+            
+            <div class="bg-slate-900/60 backdrop-blur-xl border border-blue-500/20 rounded-3xl p-8">
+              <h2 class="text-3xl font-bold mb-6">Categories</h2>
+              <div class="space-y-3">
+                ${['Web Dev', 'Mobile Apps', 'AI/ML', 'Data Science', 'Game Dev', 'IoT'].map(c => 
+                  `<div class="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl hover:bg-slate-800 cursor-pointer transition">
+                    <span class="font-semibold">${c}</span>
+                    <span class="text-gray-400">${Math.floor(Math.random()*20)+5} projects</span>
+                  </div>`
+                ).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function projectCard(p) {
+      return `
+        <div class="bg-slate-900/60 backdrop-blur-xl border border-blue-500/20 rounded-3xl p-6 card-hover">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center font-bold">
+              ${p.avatar}
+            </div>
+            <span class="text-gray-300">${p.author}</span>
+          </div>
+          <h3 class="text-xl font-bold mb-2">${p.title}</h3>
+          <p class="text-gray-400 mb-4 text-sm">${p.desc}</p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            ${p.skills.map(s => `<span class="bg-blue-500/20 text-cyan-400 px-3 py-1 rounded-full text-xs font-semibold border border-blue-500/30">${s}</span>`).join('')}
+          </div>
+          <div class="flex justify-between items-center text-sm text-gray-400 mb-4">
+            <span>${p.members}/${p.max} members</span>
+            <span>❤️ ${p.likes}</span>
+          </div>
+          <button class="w-full bg-gradient-to-r from-blue-600 to-purple-600 py-2 rounded-full font-semibold btn-glow">Join Project</button>
+        </div>
+      `;
+    }
+
+    function profileCard(p) {
+      return `
+        <div class="bg-slate-900/60 backdrop-blur-xl border border-blue-500/20 rounded-3xl p-6 card-hover text-center">
+          <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center font-bold text-2xl mb-4">
+            ${p.avatar}
+          </div>
+          <h3 class="text-xl font-bold mb-2">${p.name}</h3>
+          <p class="text-gray-400 text-sm mb-4">${p.bio}</p>
+          <div class="flex flex-wrap gap-2 justify-center mb-4">
+            ${p.skills.map(s => `<span class="bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full text-xs font-semibold border border-purple-500/30">${s}</span>`).join('')}
+          </div>
+          <p class="text-sm text-gray-400 mb-4">${p.projects} projects completed</p>
+          <button class="w-full bg-gradient-to-r from-blue-600 to-purple-600 py-2 rounded-full font-semibold btn-glow">Connect</button>
+        </div>
+      `;
+    }
+
+    function openAuth(mode) {
+      authMode = mode;
+      document.getElementById('authTitle').textContent = mode === 'login' ? 'Sign In' : 'Sign Up';
+      document.getElementById('authBtn').textContent = mode === 'login' ? 'Sign In' : 'Sign Up';
+      document.getElementById('authSwitch').textContent = mode === 'login' ? "Don't have an account?" : "Already have an account?";
+      document.getElementById('authLink').textContent = mode === 'login' ? 'Sign Up' : 'Sign In';
+      document.getElementById('nameGroup').classList.toggle('hidden', mode === 'login');
+      document.getElementById('authModal').classList.add('active');
+    }
+
+    function toggleAuth() {
+      authMode = authMode === 'login' ? 'signup' : 'login';
+      openAuth(authMode);
+    }
+
+    function handleAuth() {
+      const name = document.getElementById('nameInput').value || 'User';
+      const email = document.getElementById('emailInput').value;
+      if (!email) return alert('Please enter email');
+      
+      user = { name, email, avatar: name.split(' ').map(n => n[0]).join('') };
+      closeModal('authModal');
+      updateNav();
+    }
+
+    function updateNav() {
+      document.getElementById('navAuth').innerHTML = user ? `
+        <button onclick="openModal('projectModal')" class="bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 rounded-full font-semibold btn-glow mr-3">
+          + Create
+        </button>
+        <span class="inline-flex items-center gap-2 bg-blue-500/20 px-4 py-2 rounded-full border border-blue-500/30">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center font-bold text-sm">
+            ${user.avatar}
+          </div>
+          <button onclick="logout()" class="text-gray-400 hover:text-white">Logout</button>
+        </span>
+      ` : `
+        <button onclick="openAuth('login')" class="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-2 rounded-full font-semibold btn-glow">
+          Sign In
+        </button>
+      `;
+    }
+
+    function logout() {
+      user = null;
+      updateNav();
+    }
+
+    function createProject() {
+      const title = document.getElementById('projTitle').value;
+      const desc = document.getElementById('projDesc').value;
+      const skills = document.getElementById('projSkills').value.split(',').map(s => s.trim());
+      
+      if (!title || !desc || !skills.length) return alert('Fill all fields');
+      
+      projects.unshift({
+        id: projects.length + 1,
+        title, desc, skills,
+        author: user.name,
+        avatar: user.avatar,
+        members: 1,
+        max: 5,
+        likes: 0
+      });
+      
+      closeModal('projectModal');
+      showProjects();
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.add('active');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    function toggleMenu() {
+      document.getElementById('mobileMenu').classList.toggle('hidden');
+    }
+
+    showHome();
+  </script>
+</body>
+</html>
